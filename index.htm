@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>午間宣佈系統</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            --secondary-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --success-color: #4CAF50;
+            --bg-color: #f4f7f6;
+            --text-main: #333333;
+            --text-light: #666666;
+            --accent-color: #2575fc;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', "PingFang HK", sans-serif;
+            background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+            background-attachment: fixed;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 30px 40px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1), 0 5px 15px rgba(0,0,0,0.05);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--text-main);
+            margin-bottom: 30px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        h2 {
+            color: var(--text-main);
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .nav-buttons button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            background: #f0f0f0;
+            color: var(--text-light);
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-buttons button.active-nav {
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 5px 15px rgba(37, 117, 252, 0.3);
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+            animation: slideUpFade 0.5s ease forwards;
+        }
+
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        input[type="date"], textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            box-sizing: border-box;
+            font-family: inherit;
+            font-size: 1rem;
+            background: #fafafa;
+            transition: all 0.3s ease;
+            line-height: 1.5;
+        }
+
+        textarea {
+            resize: none; 
+            overflow: hidden;
+            min-height: 80px; 
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: var(--primary-gradient);
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .flex-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .flex-row input { flex: 1; }
+        .flex-row button { flex: 0 0 120px; width: auto; }
+
+        /* 宣佈項目卡片 */
+        .announcement-item {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            border: 1px solid #eee;
+            border-top: 5px solid var(--accent-color); /* 改為頂部邊框更有儀式感 */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            position: relative;
+        }
+
+        /* 項目描述文字 (第一項宣佈...) */
+        .item-label {
+            display: inline-block;
+            background: var(--accent-color);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .btn-update {
+            background: var(--success-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            float: right;
+            transition: 0.3s;
+        }
+
+        .btn-update:hover { background: #45a049; }
+
+        .announcement-item::after { content: ""; display: table; clear: both; }
+
+        #no-data-msg { text-align: center; color: var(--text-light); margin-top: 30px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🌤️ 午間宣佈系統</h1>
+    
+    <div class="nav-buttons">
+        <button id="nav-input" class="active-nav">輸入宣佈項目</button>
+        <button id="nav-query">查詢及修改項目</button>
+    </div>
+
+    <div id="section-input" class="section active">
+        <h2>📝 新增宣佈</h2>
+        <div class="form-group">
+            <label for="input-date">日期：</label>
+            <input type="date" id="input-date">
+        </div>
+        <div class="form-group">
+            <label for="input-content">內容：</label>
+            <textarea id="input-content" placeholder="請在此輸入宣佈內容..."></textarea>
+        </div>
+        <button id="btn-upload" class="action-btn">🚀 立即上載</button>
+    </div>
+
+    <div id="section-query" class="section">
+        <h2>🔍 查詢與管理</h2>
+        <div class="form-group">
+            <label for="query-date">選擇日期：</label>
+            <div class="flex-row">
+                <input type="date" id="query-date">
+                <button id="btn-search" class="action-btn" style="background: var(--secondary-gradient);">查詢</button>
+            </div>
+        </div>
+        <div id="query-results"></div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, query, where, getDocs, doc, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBHL8yscpNGsXDUAFa7dBNywztX3-mDuuM",
+        authDomain: "lunch-announcement-9f0d5.firebaseapp.com",
+        projectId: "lunch-announcement-9f0d5",
+        storageBucket: "lunch-announcement-9f0d5.firebasestorage.app",
+        messagingSenderId: "370563000744",
+        appId: "1:370563000744:web:409da50d8edb040223d59d"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // DOM 選取
+    const sections = { input: document.getElementById('section-input'), query: document.getElementById('section-query') };
+    const navs = { input: document.getElementById('nav-input'), query: document.getElementById('nav-query') };
+    const inputContent = document.getElementById('input-content');
+    const queryResults = document.getElementById('query-results');
+
+    // 自動調整高度函數
+    function autoResize(el) {
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+    }
+
+    inputContent.addEventListener('input', function() { autoResize(this); });
+
+    function getToday() {
+        const tz = (new Date()).getTimezoneOffset() * 60000; 
+        return (new Date(Date.now() - tz)).toISOString().split('T')[0];
+    }
+
+    // 切換頁面
+    navs.input.onclick = () => {
+        navs.input.classList.add('active-nav'); navs.query.classList.remove('active-nav');
+        sections.input.classList.add('active'); sections.query.classList.remove('active');
+    };
+    navs.query.onclick = () => {
+        navs.query.classList.add('active-nav'); navs.input.classList.remove('active-nav');
+        sections.query.classList.add('active'); sections.input.classList.remove('active');
+        document.getElementById('query-date').value = getToday();
+        fetchAnnouncements(getToday());
+    };
+
+    document.getElementById('input-date').value = getToday();
+
+    // 功能 1：上載
+    document.getElementById('btn-upload').onclick = async function() {
+        const date = document.getElementById('input-date').value;
+        const content = inputContent.value.trim();
+        if(!date || !content) return alert('請填寫完整資訊');
+
+        this.disabled = true; this.innerText = '⏳ 處理中...';
+        try {
+            await addDoc(collection(db, "announcements"), { date, content, createdAt: new Date() });
+            alert('✅ 上載成功');
+            inputContent.value = ''; inputContent.style.height = 'auto';
+        } catch(e) { alert('❌ 失敗'); }
+        this.disabled = false; this.innerText = '🚀 立即上載';
+    };
+
+    // 功能 2：查詢與修改
+    document.getElementById('btn-search').onclick = () => fetchAnnouncements(document.getElementById('query-date').value);
+
+    async function fetchAnnouncements(targetDate) {
+        queryResults.innerHTML = '<p style="text-align:center;">⏳ 載入中...</p>';
+        try {
+            // 這裡可以加上 orderBy("createdAt") 讓宣佈按輸入順序排列
+            const q = query(collection(db, "announcements"), where("date", "==", targetDate));
+            const snap = await getDocs(q);
+            queryResults.innerHTML = '';
+
+            if (snap.empty) {
+                queryResults.innerHTML = '<p id="no-data-msg">📭 該日無宣佈事項。</p>';
+                return;
+            }
+
+            // 中文數字轉換（簡單範例，支援到 10 項，超過則顯示數字）
+            const chineseNums = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
+
+            let index = 1;
+            snap.forEach((docSnap) => {
+                const data = docSnap.data();
+                const id = docSnap.id;
+                
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'announcement-item';
+
+                // 產生描述標籤，例如「第一項宣佈」
+                const numStr = index <= 10 ? chineseNums[index] : index;
+                const label = document.createElement('div');
+                label.className = 'item-label';
+                label.innerText = `第${numStr}項宣佈`;
+
+                const area = document.createElement('textarea');
+                area.value = data.content;
+                area.oninput = function() { autoResize(this); };
+
+                const upBtn = document.createElement('button');
+                upBtn.className = 'btn-update';
+                upBtn.innerText = '💾 保存修改';
+                upBtn.onclick = async function() {
+                    this.disabled = true;
+                    await updateDoc(doc(db, "announcements", id), { content: area.value });
+                    alert('✅ 已更新');
+                    this.disabled = false;
+                };
+
+                itemDiv.append(label, area, upBtn);
+                queryResults.appendChild(itemDiv);
+                
+                setTimeout(() => autoResize(area), 50);
+                index++;
+            });
+        } catch(e) { queryResults.innerHTML = '⚠️ 載入出錯'; }
+    }
+</script>
+</body>
+</html>
