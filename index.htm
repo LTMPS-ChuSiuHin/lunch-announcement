@@ -62,18 +62,19 @@
         /* 導航按鈕區 */
         .nav-buttons {
             display: flex;
+            flex-wrap: wrap;
             gap: 10px;
             margin-bottom: 30px;
         }
 
         .nav-buttons button {
-            flex: 1;
+            flex: 1 1 20%;
             padding: 12px 5px;
             border: none;
             border-radius: 12px;
             background: #f0f0f0;
             color: var(--text-light);
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -99,7 +100,7 @@
         .form-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 8px; font-weight: 500; color: var(--text-main); }
 
-        input[type="date"], input[type="month"], textarea {
+        input[type="date"], input[type="month"], input[type="text"], select, textarea {
             width: 100%;
             padding: 12px 15px;
             border: 2px solid #e0e0e0;
@@ -112,8 +113,29 @@
             line-height: 1.5;
         }
 
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            padding: 10px 0;
+        }
+        
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            font-weight: normal;
+            cursor: pointer;
+            margin: 0;
+        }
+        
+        .radio-group input[type="radio"] {
+            margin-right: 8px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
         textarea { resize: none; overflow: hidden; min-height: 80px; }
-        input:focus, textarea:focus {
+        input:focus, select:focus, textarea:focus {
             outline: none; border-color: #4facfe; background: #ffffff;
             box-shadow: 0 0 0 4px rgba(79, 172, 254, 0.15);
         }
@@ -148,12 +170,20 @@
             padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; margin-bottom: 12px;
         }
         .card-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
-        .btn-update, .btn-delete {
+        .btn-update, .btn-delete, .btn-edit-tmpl {
             color: white; border: none; padding: 10px 18px; border-radius: 8px;
             cursor: pointer; font-weight: 500; transition: 0.3s; font-size: 0.95rem;
         }
         .btn-update { background: var(--success-color); }
         .btn-delete { background: var(--danger-color); }
+        .btn-edit-tmpl { background: var(--info-color); }
+
+        .template-manage-item {
+            background: #f9f9f9; border: 1px solid #ddd; padding: 15px;
+            border-radius: 10px; margin-bottom: 15px;
+        }
+        .template-manage-item input { margin-bottom: 10px; font-weight: bold; }
+        .template-manage-item textarea { margin-bottom: 10px; min-height: 60px; }
 
         /* ======== 日曆檢視樣式 ======== */
         .calendar-header {
@@ -238,8 +268,7 @@
         @keyframes toastLeave { to { opacity: 0; transform: translateY(-20px); } }
         
         @media (max-width: 550px) {
-            .nav-buttons { flex-wrap: wrap; }
-            .nav-buttons button { flex: 1 1 100%; } /* 手機版按鈕直排 */
+            .nav-buttons button { flex: 1 1 45%; } 
             .calendar-day { min-height: 45px; padding: 10px 5px; font-size: 1rem; }
         }
     </style>
@@ -252,7 +281,8 @@
     <div class="nav-buttons">
         <button id="nav-input" class="active-nav">輸入宣佈項目</button>
         <button id="nav-month">按月份搜尋</button>
-        <button id="nav-query">查詢及管理項目</button>
+        <button id="nav-query">查詢及管理</button>
+        <button id="nav-template">管理範本</button>
     </div>
 
     <div id="section-input" class="section active">
@@ -261,15 +291,26 @@
             <label for="input-date">日期：</label>
             <input type="date" id="input-date">
         </div>
+
+        <div class="form-group">
+            <label>宣佈方式：</label>
+            <div class="radio-group">
+                <label><input type="radio" name="input-announce-type" value="代為宣佈" checked> 代為宣佈</label>
+                <label><input type="radio" name="input-announce-type" value="自行宣佈"> 自行宣佈</label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="input-teacher">負責老師：</label>
+            <select id="input-teacher">
+                <!-- 老師選項透過 JS 生成 -->
+            </select>
+        </div>
         
         <div class="form-group">
             <label>快速範本：</label>
-            <div class="template-group">
-                <button class="btn-template" data-text="今天小息會是課室小息，請同學留意。">🏫 課室小息</button>
-                <button class="btn-template" data-text="今天午息有視覺藝墟，會製作「______」，歡迎 __ -__ 年級同學參加，每班名額2個，帶同藝墟令牌到視藝室參與活動，請Team ___ 視藝大使到視藝室當值。">🎨 視覺藝墟</button>
-                <button class="btn-template" data-text="明天第一次雙週E多元智能活，請班主任宣布同學組別，體育和制服團體，請適當服裝。">🏃 明天雙週E</button>
-                <button class="btn-template" data-text="今天常識室關閉，請同學留意。">🔒 常識室關閉</button>
-                <button class="btn-template" data-text="今天下午有安靜閱讀時段，請同學執好枱面，準備定圖書，稍後能提供一個安靜舒適的環境進行閱讀。">📖 安靜閱讀</button>
+            <div class="template-group" id="dynamic-templates-container">
+                <!-- 範本按鈕透過 JS 生成 -->
             </div>
         </div>
 
@@ -295,7 +336,7 @@
                 <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
             </div>
             <div id="calendar-grid" class="calendar-grid">
-                </div>
+            </div>
         </div>
     </div>
 
@@ -309,6 +350,22 @@
             </div>
         </div>
         <div id="query-results"></div>
+    </div>
+
+    <div id="section-template" class="section">
+        <h2>⚙️ 修改範本</h2>
+        <div class="form-group">
+            <label for="new-tmpl-name">新增範本名稱：</label>
+            <input type="text" id="new-tmpl-name" placeholder="例如：🏫 課室小息">
+        </div>
+        <div class="form-group">
+            <label for="new-tmpl-content">新增範本內容：</label>
+            <textarea id="new-tmpl-content" placeholder="請輸入範本預設文字..."></textarea>
+        </div>
+        <button id="btn-add-tmpl" class="action-btn" style="margin-bottom: 25px;">➕ 加入新範本</button>
+        
+        <h3>現有範本管理</h3>
+        <div id="template-manage-list"></div>
     </div>
 </div>
 
@@ -331,10 +388,139 @@
     const db = getFirestore(app);
 
     // 取得所有頁籤與內容區塊
-    const navIds = ['nav-input', 'nav-month', 'nav-query'];
-    const sectionIds = ['section-input', 'section-month', 'section-query'];
+    const navIds = ['nav-input', 'nav-month', 'nav-query', 'nav-template'];
+    const sectionIds = ['section-input', 'section-month', 'section-query', 'section-template'];
     const inputContent = document.getElementById('input-content');
     const queryResults = document.getElementById('query-results');
+
+    // 老師選單資料
+    const teacherList = [
+        "01 黃惠玲", "02 蔡惠清", "03 張 景", "04 顧 冰", "05 梁浣儀", "06 吳樂彤", 
+        "07 陳式藩", "08 黎錦姿", "09 俞家欣", "10 葉凱嘉", "11 吳校潔", "12 唐 俊", 
+        "13 梁振邦", "14 馮惠儀", "15 廖嘉寶", "16 朱兆軒", "17 朱惠勤", "18 葉佩堯", 
+        "19 陳 菁", "20 曹詠恩", "21 鄭婉雯", "22 李雅雅", "23 李偉樂", "24 庄婷婷", 
+        "25 區嘉宜", "26 廖宇青", "27 傅小梅", "28 曾玉翠", "29 駱慧英", "30 黃婉君", 
+        "31 林 敏", "32 魏玉鳳", "33 鍾明心", "34 林少洪", "35 李莉詩", "36 洪楚童", 
+        "37 黃新采", "38 葉慧姍", "39 冼麗明", "40 譚以靖", "41 黃湘誼", "42 石浩傑", 
+        "43 吳巧晴", "44 盧子信", "45 彭雅琳", "46 方韻瑤", "47 余潤芳", 
+        "48 張鳳娣", "49 黃旭東", "50 許芷穎", "51 林晉暉", "52 溫梓薇", "53 何月驊", 
+        "54 黃慧儀", "55 陳澤陽"
+    ];
+
+    // 初始化老師選單
+    const teacherSelect = document.getElementById('input-teacher');
+    teacherList.forEach(teacher => {
+        const option = document.createElement('option');
+        option.value = teacher;
+        option.text = teacher;
+        teacherSelect.appendChild(option);
+    });
+
+    // 預設範本
+    const defaultTemplates = [
+        { name: "🏫 課室小息", text: "今天小息會是課室小息，請同學留意。" },
+        { name: "🎨 視覺藝墟", text: "今天午息有視覺藝墟，會製作「______」，歡迎 __ -__ 年級同學參加，每班名額2個，帶同藝墟令牌到視藝室參與活動，請Team ___ 視藝大使到視藝室當值。" },
+        { name: "🏃 明天雙週E", text: "明天第一次雙週E多元智能活，請班主任宣布同學組別，體育和制服團體，請適當服裝。" },
+        { name: "🔒 常識室關閉", text: "今天常識室關閉，請同學留意。" },
+        { name: "📖 安靜閱讀", text: "今天下午有安靜閱讀時段，請同學執好枱面，準備定圖書，稍後能提供一個安靜舒適的環境進行閱讀。" }
+    ];
+
+    function loadTemplates() {
+        let tmpls = localStorage.getItem('announcement_templates');
+        if (!tmpls) {
+            localStorage.setItem('announcement_templates', JSON.stringify(defaultTemplates));
+            return defaultTemplates;
+        }
+        return JSON.parse(tmpls);
+    }
+
+    function saveTemplates(tmpls) {
+        localStorage.setItem('announcement_templates', JSON.stringify(tmpls));
+        renderTemplates();
+    }
+
+    function renderTemplates() {
+        const tmpls = loadTemplates();
+        const inputContainer = document.getElementById('dynamic-templates-container');
+        const manageContainer = document.getElementById('template-manage-list');
+        
+        inputContainer.innerHTML = '';
+        manageContainer.innerHTML = '';
+
+        tmpls.forEach((tmpl, index) => {
+            // 渲染新增頁面的按鈕
+            const btn = document.createElement('button');
+            btn.className = 'btn-template';
+            btn.innerText = tmpl.name;
+            btn.onclick = (e) => {
+                e.preventDefault();
+                inputContent.value = inputContent.value.trim() === '' ? tmpl.text : inputContent.value + '\n\n' + tmpl.text;
+                autoResize(inputContent);
+                showToast('💡 已套用範本', 'info');
+            };
+            inputContainer.appendChild(btn);
+
+            // 渲染管理頁面的編輯區塊
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'template-manage-item';
+            
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.value = tmpl.name;
+            
+            const textInput = document.createElement('textarea');
+            textInput.value = tmpl.text;
+            textInput.oninput = function() { autoResize(this); };
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'card-actions';
+
+            const saveBtn = document.createElement('button');
+            saveBtn.className = 'btn-update';
+            saveBtn.innerText = '💾 儲存修改';
+            saveBtn.onclick = () => {
+                tmpls[index].name = nameInput.value;
+                tmpls[index].text = textInput.value;
+                saveTemplates(tmpls);
+                showToast('✅ 範本已更新', 'success');
+            };
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn-delete';
+            delBtn.innerText = '🗑️ 刪除';
+            delBtn.onclick = () => {
+                if(confirm('確定要刪除這個範本嗎？')) {
+                    tmpls.splice(index, 1);
+                    saveTemplates(tmpls);
+                    showToast('🗑️ 範本已刪除', 'info');
+                }
+            };
+
+            actionsDiv.append(delBtn, saveBtn);
+            itemDiv.append(nameInput, textInput, actionsDiv);
+            manageContainer.appendChild(itemDiv);
+            
+            setTimeout(() => autoResize(textInput), 0);
+        });
+    }
+
+    // 初始化載入範本
+    renderTemplates();
+
+    // 新增自訂範本
+    document.getElementById('btn-add-tmpl').onclick = () => {
+        const name = document.getElementById('new-tmpl-name').value.trim();
+        const text = document.getElementById('new-tmpl-content').value.trim();
+        if(!name || !text) return showToast('⚠️ 請填寫完整範本名稱與內容', 'error');
+        
+        const tmpls = loadTemplates();
+        tmpls.push({ name, text });
+        saveTemplates(tmpls);
+        
+        document.getElementById('new-tmpl-name').value = '';
+        document.getElementById('new-tmpl-content').value = '';
+        showToast('✅ 範本新增成功', 'success');
+    };
 
     function showToast(message, type = 'success') {
         const container = document.getElementById('toast-container');
@@ -351,23 +537,13 @@
     function autoResize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
     inputContent.addEventListener('input', function() { autoResize(this); });
 
-    document.querySelectorAll('.btn-template').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const txt = btn.getAttribute('data-text');
-            inputContent.value = inputContent.value.trim() === '' ? txt : inputContent.value + '\n\n' + txt;
-            autoResize(inputContent);
-            showToast('💡 已套用範本', 'info');
-        });
-    });
-
     function getToday() {
         const tz = (new Date()).getTimezoneOffset() * 60000; 
         return (new Date(Date.now() - tz)).toISOString().split('T')[0];
     }
     
     function getCurrentMonth() {
-        return getToday().substring(0, 7); // 取得 YYYY-MM
+        return getToday().substring(0, 7);
     }
 
     // ======== 頁籤切換邏輯 ========
@@ -381,6 +557,7 @@
     }
 
     document.getElementById('nav-input').onclick = () => switchTab('nav-input');
+    document.getElementById('nav-template').onclick = () => switchTab('nav-template');
     
     document.getElementById('nav-month').onclick = () => {
         switchTab('nav-month');
@@ -398,32 +575,38 @@
     document.getElementById('input-date').value = getToday();
     document.getElementById('month-input').value = getCurrentMonth();
 
-    // 功能 1：上載
+    // 功能 1：上載 (加入宣佈方式與老師資料)
     document.getElementById('btn-upload').onclick = async function() {
         const date = document.getElementById('input-date').value;
+        const announceType = document.querySelector('input[name="input-announce-type"]:checked').value;
+        const teacher = document.getElementById('input-teacher').value;
         const content = inputContent.value.trim();
+        
         if(!date || !content) return showToast('⚠️ 請填寫完整資訊', 'error');
 
         this.disabled = true; this.innerText = '⏳ 處理中...';
         try {
-            await addDoc(collection(db, "announcements"), { date, content, createdAt: new Date() });
+            await addDoc(collection(db, "announcements"), { 
+                date, 
+                announceType, 
+                teacher, 
+                content, 
+                createdAt: new Date() 
+            });
             showToast('✅ 宣佈事項已成功上載！', 'success');
             inputContent.value = ''; inputContent.style.height = 'auto';
+            document.querySelector('input[name="input-announce-type"][value="代為宣佈"]').checked = true;
         } catch(e) { showToast('❌ 上載失敗', 'error'); }
         this.disabled = false; this.innerText = '🚀 立即上載';
     };
 
-
-    // ======== 功能 3：按月份搜尋與繪製日曆 (新功能邏輯) ========
+    // 功能 3：按月份搜尋與繪製日曆
     document.getElementById('btn-month-search').onclick = async function() {
-        const monthStr = document.getElementById('month-input').value; // YYYY-MM
+        const monthStr = document.getElementById('month-input').value; 
         if(!monthStr) return;
         
         const [year, month] = monthStr.split('-');
-        
-        // 算出該月的第一天與最後一天
         const startDate = `${year}-${month}-01`;
-        // 利用 JavaScript Date 特性，將日期設為 0 可取得上個月最後一天
         const lastDayObj = new Date(year, month, 0); 
         const lastDate = lastDayObj.getDate();
         const endDate = `${year}-${month}-${String(lastDate).padStart(2, '0')}`;
@@ -432,7 +615,6 @@
         btn.innerText = '⏳ 載入中...'; btn.disabled = true;
 
         try {
-            // 查詢該月份區間內的所有宣佈
             const q = query(
                 collection(db, "announcements"), 
                 where("date", ">=", startDate),
@@ -440,7 +622,6 @@
             );
             const snap = await getDocs(q);
             
-            // 統計每一天的數量
             const dateCounts = {};
             snap.forEach(doc => {
                 const d = doc.data().date;
@@ -461,18 +642,14 @@
     function renderCalendar(year, month, totalDays, dateCounts) {
         const grid = document.getElementById('calendar-grid');
         grid.innerHTML = '';
-
-        // 找出該月第一天是星期幾 (0 = 星期日)
         const firstDayOfWeek = new Date(year, month - 1, 1).getDay();
 
-        // 填入月初的空白格子
         for (let i = 0; i < firstDayOfWeek; i++) {
             const emptyDiv = document.createElement('div');
             emptyDiv.className = 'calendar-day empty';
             grid.appendChild(emptyDiv);
         }
 
-        // 填入該月的每一天
         for (let day = 1; day <= totalDays; day++) {
             const dateString = `${year}-${month}-${String(day).padStart(2, '0')}`;
             const count = dateCounts[dateString] || 0;
@@ -483,26 +660,22 @@
 
             if (count > 0) {
                 dayDiv.classList.add('has-data');
-                
-                // 加入數量紅點
                 const badge = document.createElement('div');
                 badge.className = 'count-badge';
                 badge.innerText = count;
                 dayDiv.appendChild(badge);
 
-                // 點擊後跳轉到查詢頁面顯示當日詳情
                 dayDiv.onclick = () => {
                     switchTab('nav-query');
                     document.getElementById('query-date').value = dateString;
                     fetchAnnouncements(dateString);
                 };
             }
-
             grid.appendChild(dayDiv);
         }
     }
 
-    // ======== 功能 2：查詢與管理 ========
+    // 功能 2：查詢與管理 (加入宣佈方式與老師修改)
     document.getElementById('btn-search').onclick = () => fetchAnnouncements(document.getElementById('query-date').value);
 
     async function fetchAnnouncements(targetDate) {
@@ -532,6 +705,31 @@
                 label.className = 'item-label';
                 label.innerText = `第${numStr}項宣佈`;
 
+                // 產生修改狀態的 UI
+                const typeDiv = document.createElement('div');
+                typeDiv.className = 'form-group';
+                typeDiv.style.marginBottom = '10px';
+                typeDiv.innerHTML = `
+                    <label style="font-size: 0.9rem;">宣佈方式：</label>
+                    <div class="radio-group" style="padding: 0;">
+                        <label><input type="radio" name="edit-type-${id}" value="代為宣佈" ${data.announceType === '代為宣佈' || !data.announceType ? 'checked' : ''}> 代為宣佈</label>
+                        <label><input type="radio" name="edit-type-${id}" value="自行宣佈" ${data.announceType === '自行宣佈' ? 'checked' : ''}> 自行宣佈</label>
+                    </div>
+                `;
+
+                const teacherDiv = document.createElement('div');
+                teacherDiv.className = 'form-group';
+                teacherDiv.style.marginBottom = '10px';
+                const tSelect = document.createElement('select');
+                teacherList.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t; opt.text = t;
+                    if (data.teacher === t) opt.selected = true;
+                    tSelect.appendChild(opt);
+                });
+                teacherDiv.innerHTML = `<label style="font-size: 0.9rem;">負責老師：</label>`;
+                teacherDiv.appendChild(tSelect);
+
                 const area = document.createElement('textarea');
                 area.value = data.content;
                 area.oninput = function() { autoResize(this); };
@@ -541,15 +739,20 @@
 
                 const upBtn = document.createElement('button');
                 upBtn.className = 'btn-update';
-                upBtn.innerText = '💾 保存';
+                upBtn.innerText = '💾 保存修改';
                 upBtn.onclick = async function() {
                     if(!area.value.trim()) return showToast('⚠️ 內容不能為空', 'error');
                     this.disabled = true; this.innerText = '⏳...';
                     try {
-                        await updateDoc(doc(db, "announcements", id), { content: area.value });
-                        showToast('✅ 宣佈內容已更新！', 'success');
+                        const newType = document.querySelector(`input[name="edit-type-${id}"]:checked`).value;
+                        await updateDoc(doc(db, "announcements", id), { 
+                            announceType: newType,
+                            teacher: tSelect.value,
+                            content: area.value 
+                        });
+                        showToast('✅ 宣佈資料已更新！', 'success');
                     } catch(e) { showToast('❌ 更新失敗', 'error'); }
-                    this.disabled = false; this.innerText = '💾 保存';
+                    this.disabled = false; this.innerText = '💾 保存修改';
                 };
 
                 const delBtn = document.createElement('button');
@@ -576,7 +779,7 @@
                 };
 
                 actionsDiv.append(delBtn, upBtn);
-                itemDiv.append(label, area, actionsDiv);
+                itemDiv.append(label, typeDiv, teacherDiv, area, actionsDiv);
                 queryResults.appendChild(itemDiv);
                 
                 setTimeout(() => autoResize(area), 50);
