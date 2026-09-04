@@ -353,7 +353,7 @@
     </div>
 
     <div id="section-template" class="section">
-        <h2>⚙️ 修改範本</h2>
+        <h2>⚙️ 修改範本 (雲端同步)</h2>
         <div class="form-group">
             <label for="new-tmpl-name">新增範本名稱：</label>
             <input type="text" id="new-tmpl-name" placeholder="例如：🏫 課室小息">
@@ -373,7 +373,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, query, where, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, query, where, getDocs, doc, updateDoc, deleteDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyBHL8yscpNGsXDUAFa7dBNywztX3-mDuuM",
@@ -387,7 +387,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // 取得所有頁籤與內容區塊
     const navIds = ['nav-input', 'nav-month', 'nav-query', 'nav-template'];
     const sectionIds = ['section-input', 'section-month', 'section-query', 'section-template'];
     const inputContent = document.getElementById('input-content');
@@ -397,26 +396,24 @@
     const teacherList = [
         "01 黃惠玲", "02 蔡惠清", "03 張 景", "04 顧 冰", "05 梁浣儀", "06 吳樂彤", 
         "07 陳式藩", "08 黎錦姿", "09 俞家欣", "10 葉凱嘉", "11 吳校潔", "12 唐 俊", 
-        "13 梁振邦", "14 馮惠儀", "15 廖嘉寶", "16 朱兆軒", "17 朱惠勤", "18 葉佩堯", 
+        "13 梁振邦", "15 馮惠儀", "15 廖嘉寶", "16 朱兆軒", "17 朱惠勤", "18 葉佩堯", 
         "19 陳 菁", "20 曹詠恩", "21 鄭婉雯", "22 李雅雅", "23 李偉樂", "24 庄婷婷", 
         "25 區嘉宜", "26 廖宇青", "27 傅小梅", "28 曾玉翠", "29 駱慧英", "30 黃婉君", 
         "31 林 敏", "32 魏玉鳳", "33 鍾明心", "34 林少洪", "35 李莉詩", "36 洪楚童", 
         "37 黃新采", "38 葉慧姍", "39 冼麗明", "40 譚以靖", "41 黃湘誼", "42 石浩傑", 
-        "43 吳巧晴", "44 盧子信", "45 彭雅琳", "46 方韻瑤", "47 余潤芳", 
+        "43 吳巧晴", "44 盧子信", "44 鍾換兒", "45 彭雅琳", "46 方韻瑤", "47 余潤芳", 
         "48 張鳳娣", "49 黃旭東", "50 許芷穎", "51 林晉暉", "52 溫梓薇", "53 何月驊", 
         "54 黃慧儀", "55 陳澤陽"
     ];
 
-    // 初始化老師選單
     const teacherSelect = document.getElementById('input-teacher');
     teacherList.forEach(teacher => {
         const option = document.createElement('option');
-        option.value = teacher;
-        option.text = teacher;
+        option.value = teacher; option.text = teacher;
         teacherSelect.appendChild(option);
     });
 
-    // 預設範本
+    // Firebase 範本邏輯
     const defaultTemplates = [
         { name: "🏫 課室小息", text: "今天小息會是課室小息，請同學留意。" },
         { name: "🎨 視覺藝墟", text: "今天午息有視覺藝墟，會製作「______」，歡迎 __ -__ 年級同學參加，每班名額2個，帶同藝墟令牌到視藝室參與活動，請Team ___ 視藝大使到視藝室當值。" },
@@ -425,101 +422,138 @@
         { name: "📖 安靜閱讀", text: "今天下午有安靜閱讀時段，請同學執好枱面，準備定圖書，稍後能提供一個安靜舒適的環境進行閱讀。" }
     ];
 
-    function loadTemplates() {
-        let tmpls = localStorage.getItem('announcement_templates');
-        if (!tmpls) {
-            localStorage.setItem('announcement_templates', JSON.stringify(defaultTemplates));
-            return defaultTemplates;
-        }
-        return JSON.parse(tmpls);
-    }
-
-    function saveTemplates(tmpls) {
-        localStorage.setItem('announcement_templates', JSON.stringify(tmpls));
-        renderTemplates();
-    }
-
-    function renderTemplates() {
-        const tmpls = loadTemplates();
+    async function loadAndRenderTemplates() {
         const inputContainer = document.getElementById('dynamic-templates-container');
         const manageContainer = document.getElementById('template-manage-list');
         
-        inputContainer.innerHTML = '';
-        manageContainer.innerHTML = '';
+        inputContainer.innerHTML = '<span style="color:#888; font-size:0.9rem;">⏳ 載入範本中...</span>';
+        manageContainer.innerHTML = '<p style="text-align:center;">⏳ 載入範本中...</p>';
 
-        tmpls.forEach((tmpl, index) => {
-            // 渲染新增頁面的按鈕
-            const btn = document.createElement('button');
-            btn.className = 'btn-template';
-            btn.innerText = tmpl.name;
-            btn.onclick = (e) => {
-                e.preventDefault();
-                inputContent.value = inputContent.value.trim() === '' ? tmpl.text : inputContent.value + '\n\n' + tmpl.text;
-                autoResize(inputContent);
-                showToast('💡 已套用範本', 'info');
-            };
-            inputContainer.appendChild(btn);
+        try {
+            let q = query(collection(db, "templates"), orderBy("createdAt", "asc"));
+            let snap = await getDocs(q);
 
-            // 渲染管理頁面的編輯區塊
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'template-manage-item';
-            
-            const nameInput = document.createElement('input');
-            nameInput.type = 'text';
-            nameInput.value = tmpl.name;
-            
-            const textInput = document.createElement('textarea');
-            textInput.value = tmpl.text;
-            textInput.oninput = function() { autoResize(this); };
-
-            const actionsDiv = document.createElement('div');
-            actionsDiv.className = 'card-actions';
-
-            const saveBtn = document.createElement('button');
-            saveBtn.className = 'btn-update';
-            saveBtn.innerText = '💾 儲存修改';
-            saveBtn.onclick = () => {
-                tmpls[index].name = nameInput.value;
-                tmpls[index].text = textInput.value;
-                saveTemplates(tmpls);
-                showToast('✅ 範本已更新', 'success');
-            };
-
-            const delBtn = document.createElement('button');
-            delBtn.className = 'btn-delete';
-            delBtn.innerText = '🗑️ 刪除';
-            delBtn.onclick = () => {
-                if(confirm('確定要刪除這個範本嗎？')) {
-                    tmpls.splice(index, 1);
-                    saveTemplates(tmpls);
-                    showToast('🗑️ 範本已刪除', 'info');
+            // 如果 Firebase 範本庫是空的，自動匯入預設範本
+            if (snap.empty) {
+                for (let i = 0; i < defaultTemplates.length; i++) {
+                    const tmpl = defaultTemplates[i];
+                    await addDoc(collection(db, "templates"), {
+                        name: tmpl.name,
+                        text: tmpl.text,
+                        createdAt: new Date(Date.now() + i * 1000) // 確保寫入排序
+                    });
                 }
-            };
+                snap = await getDocs(q); // 重新抓取資料
+            }
 
-            actionsDiv.append(delBtn, saveBtn);
-            itemDiv.append(nameInput, textInput, actionsDiv);
-            manageContainer.appendChild(itemDiv);
-            
-            setTimeout(() => autoResize(textInput), 0);
-        });
+            inputContainer.innerHTML = '';
+            manageContainer.innerHTML = '';
+
+            snap.forEach((docSnap) => {
+                const id = docSnap.id;
+                const tmpl = docSnap.data();
+
+                // 渲染新增頁面的按鈕
+                const btn = document.createElement('button');
+                btn.className = 'btn-template';
+                btn.innerText = tmpl.name;
+                btn.onclick = (e) => {
+                    e.preventDefault();
+                    inputContent.value = inputContent.value.trim() === '' ? tmpl.text : inputContent.value + '\n\n' + tmpl.text;
+                    autoResize(inputContent);
+                    showToast('💡 已套用範本', 'info');
+                };
+                inputContainer.appendChild(btn);
+
+                // 渲染管理頁面的編輯區塊
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'template-manage-item';
+                
+                const nameInput = document.createElement('input');
+                nameInput.type = 'text';
+                nameInput.value = tmpl.name;
+                
+                const textInput = document.createElement('textarea');
+                textInput.value = tmpl.text;
+                textInput.oninput = function() { autoResize(this); };
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'card-actions';
+
+                const saveBtn = document.createElement('button');
+                saveBtn.className = 'btn-update';
+                saveBtn.innerText = '💾 儲存修改';
+                saveBtn.onclick = async function() {
+                    if(!nameInput.value.trim() || !textInput.value.trim()) return showToast('⚠️ 範本名稱與內容不能為空', 'error');
+                    this.disabled = true; this.innerText = '⏳...';
+                    try {
+                        await updateDoc(doc(db, "templates", id), {
+                            name: nameInput.value,
+                            text: textInput.value
+                        });
+                        showToast('✅ 範本已更新', 'success');
+                        loadAndRenderTemplates(); // 重新整理畫面
+                    } catch(e) {
+                        showToast('❌ 更新失敗', 'error');
+                        this.disabled = false; this.innerText = '💾 儲存修改';
+                    }
+                };
+
+                const delBtn = document.createElement('button');
+                delBtn.className = 'btn-delete';
+                delBtn.innerText = '🗑️ 刪除';
+                delBtn.onclick = async function() {
+                    if(confirm('確定要刪除這個範本嗎？所有使用者的範本都會同步刪除。')) {
+                        this.disabled = true; saveBtn.disabled = true;
+                        try {
+                            await deleteDoc(doc(db, "templates", id));
+                            showToast('🗑️ 範本已刪除', 'info');
+                            loadAndRenderTemplates();
+                        } catch(e) {
+                            showToast('❌ 刪除失敗', 'error');
+                            this.disabled = false; saveBtn.disabled = false;
+                        }
+                    }
+                };
+
+                actionsDiv.append(delBtn, saveBtn);
+                itemDiv.append(nameInput, textInput, actionsDiv);
+                manageContainer.appendChild(itemDiv);
+                
+                setTimeout(() => autoResize(textInput), 0);
+            });
+        } catch(e) {
+            console.error(e);
+            inputContainer.innerHTML = '<span style="color:var(--danger-color);">⚠️ 無法連線至資料庫讀取範本</span>';
+            manageContainer.innerHTML = '<p>⚠️ 無法連線至資料庫讀取範本</p>';
+        }
     }
 
-    // 初始化載入範本
-    renderTemplates();
+    // 啟動時自動載入 Firebase 範本
+    loadAndRenderTemplates();
 
-    // 新增自訂範本
-    document.getElementById('btn-add-tmpl').onclick = () => {
+    // 新增自訂範本至 Firebase
+    document.getElementById('btn-add-tmpl').onclick = async function() {
         const name = document.getElementById('new-tmpl-name').value.trim();
         const text = document.getElementById('new-tmpl-content').value.trim();
         if(!name || !text) return showToast('⚠️ 請填寫完整範本名稱與內容', 'error');
         
-        const tmpls = loadTemplates();
-        tmpls.push({ name, text });
-        saveTemplates(tmpls);
+        const btn = this;
+        btn.disabled = true; btn.innerText = '⏳ 加入中...';
         
-        document.getElementById('new-tmpl-name').value = '';
-        document.getElementById('new-tmpl-content').value = '';
-        showToast('✅ 範本新增成功', 'success');
+        try {
+            await addDoc(collection(db, "templates"), { 
+                name, 
+                text, 
+                createdAt: new Date() 
+            });
+            document.getElementById('new-tmpl-name').value = '';
+            document.getElementById('new-tmpl-content').value = '';
+            showToast('✅ 範本新增成功', 'success');
+            loadAndRenderTemplates();
+        } catch(e) { showToast('❌ 範本新增失敗', 'error'); }
+        
+        btn.disabled = false; btn.innerText = '➕ 加入新範本';
     };
 
     function showToast(message, type = 'success') {
@@ -541,19 +575,15 @@
         const tz = (new Date()).getTimezoneOffset() * 60000; 
         return (new Date(Date.now() - tz)).toISOString().split('T')[0];
     }
-    
-    function getCurrentMonth() {
-        return getToday().substring(0, 7);
-    }
+    function getCurrentMonth() { return getToday().substring(0, 7); }
 
     // ======== 頁籤切換邏輯 ========
     function switchTab(activeNavId) {
-        navIds.forEach(id => {
-            document.getElementById(id).classList.toggle('active-nav', id === activeNavId);
-        });
-        sectionIds.forEach(id => {
-            document.getElementById(id).classList.toggle('active', id.replace('section', 'nav') === activeNavId);
-        });
+        navIds.forEach(id => document.getElementById(id).classList.toggle('active-nav', id === activeNavId));
+        sectionIds.forEach(id => document.getElementById(id).classList.toggle('active', id.replace('section', 'nav') === activeNavId));
+        if (activeNavId === 'nav-template' || activeNavId === 'nav-input') {
+            loadAndRenderTemplates(); // 切換到包含範本的頁籤時可觸發更新，以防其他設備有修改
+        }
     }
 
     document.getElementById('nav-input').onclick = () => switchTab('nav-input');
@@ -561,9 +591,7 @@
     
     document.getElementById('nav-month').onclick = () => {
         switchTab('nav-month');
-        if (!document.getElementById('month-input').value) {
-            document.getElementById('month-input').value = getCurrentMonth();
-        }
+        if (!document.getElementById('month-input').value) document.getElementById('month-input').value = getCurrentMonth();
     };
 
     document.getElementById('nav-query').onclick = () => {
@@ -575,7 +603,7 @@
     document.getElementById('input-date').value = getToday();
     document.getElementById('month-input').value = getCurrentMonth();
 
-    // 功能 1：上載 (加入宣佈方式與老師資料)
+    // 功能 1：上載宣佈
     document.getElementById('btn-upload').onclick = async function() {
         const date = document.getElementById('input-date').value;
         const announceType = document.querySelector('input[name="input-announce-type"]:checked').value;
@@ -587,11 +615,7 @@
         this.disabled = true; this.innerText = '⏳ 處理中...';
         try {
             await addDoc(collection(db, "announcements"), { 
-                date, 
-                announceType, 
-                teacher, 
-                content, 
-                createdAt: new Date() 
+                date, announceType, teacher, content, createdAt: new Date() 
             });
             showToast('✅ 宣佈事項已成功上載！', 'success');
             inputContent.value = ''; inputContent.style.height = 'auto';
@@ -600,28 +624,20 @@
         this.disabled = false; this.innerText = '🚀 立即上載';
     };
 
-    // 功能 3：按月份搜尋與繪製日曆
+    // 功能 3：按月份搜尋
     document.getElementById('btn-month-search').onclick = async function() {
         const monthStr = document.getElementById('month-input').value; 
         if(!monthStr) return;
-        
         const [year, month] = monthStr.split('-');
         const startDate = `${year}-${month}-01`;
-        const lastDayObj = new Date(year, month, 0); 
-        const lastDate = lastDayObj.getDate();
+        const lastDate = new Date(year, month, 0).getDate();
         const endDate = `${year}-${month}-${String(lastDate).padStart(2, '0')}`;
 
-        const btn = this;
-        btn.innerText = '⏳ 載入中...'; btn.disabled = true;
+        this.innerText = '⏳ 載入中...'; this.disabled = true;
 
         try {
-            const q = query(
-                collection(db, "announcements"), 
-                where("date", ">=", startDate),
-                where("date", "<=", endDate)
-            );
+            const q = query(collection(db, "announcements"), where("date", ">=", startDate), where("date", "<=", endDate));
             const snap = await getDocs(q);
-            
             const dateCounts = {};
             snap.forEach(doc => {
                 const d = doc.data().date;
@@ -630,13 +646,8 @@
 
             renderCalendar(year, month, lastDate, dateCounts);
             document.getElementById('calendar-container').style.display = 'block';
-
-        } catch(e) {
-            console.error(e);
-            showToast('❌ 讀取月份數據失敗', 'error');
-        } finally {
-            btn.innerText = '檢視'; btn.disabled = false;
-        }
+        } catch(e) { showToast('❌ 讀取月份數據失敗', 'error'); } 
+        finally { this.innerText = '檢視'; this.disabled = false; }
     };
 
     function renderCalendar(year, month, totalDays, dateCounts) {
@@ -653,7 +664,6 @@
         for (let day = 1; day <= totalDays; day++) {
             const dateString = `${year}-${month}-${String(day).padStart(2, '0')}`;
             const count = dateCounts[dateString] || 0;
-
             const dayDiv = document.createElement('div');
             dayDiv.className = 'calendar-day';
             dayDiv.innerText = day;
@@ -661,8 +671,7 @@
             if (count > 0) {
                 dayDiv.classList.add('has-data');
                 const badge = document.createElement('div');
-                badge.className = 'count-badge';
-                badge.innerText = count;
+                badge.className = 'count-badge'; badge.innerText = count;
                 dayDiv.appendChild(badge);
 
                 dayDiv.onclick = () => {
@@ -675,7 +684,7 @@
         }
     }
 
-    // 功能 2：查詢與管理 (加入宣佈方式與老師修改)
+    // 功能 2：查詢與管理
     document.getElementById('btn-search').onclick = () => fetchAnnouncements(document.getElementById('query-date').value);
 
     async function fetchAnnouncements(targetDate) {
@@ -685,10 +694,7 @@
             const snap = await getDocs(q);
             queryResults.innerHTML = '';
 
-            if (snap.empty) {
-                queryResults.innerHTML = '<p id="no-data-msg">📭 該日無宣佈事項。</p>';
-                return;
-            }
+            if (snap.empty) return queryResults.innerHTML = '<p id="no-data-msg">📭 該日無宣佈事項。</p>';
 
             const chineseNums = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
             let index = 1;
@@ -702,13 +708,10 @@
 
                 const numStr = index <= 10 ? chineseNums[index] : index;
                 const label = document.createElement('div');
-                label.className = 'item-label';
-                label.innerText = `第${numStr}項宣佈`;
+                label.className = 'item-label'; label.innerText = `第${numStr}項宣佈`;
 
-                // 產生修改狀態的 UI
                 const typeDiv = document.createElement('div');
-                typeDiv.className = 'form-group';
-                typeDiv.style.marginBottom = '10px';
+                typeDiv.className = 'form-group'; typeDiv.style.marginBottom = '10px';
                 typeDiv.innerHTML = `
                     <label style="font-size: 0.9rem;">宣佈方式：</label>
                     <div class="radio-group" style="padding: 0;">
@@ -718,8 +721,7 @@
                 `;
 
                 const teacherDiv = document.createElement('div');
-                teacherDiv.className = 'form-group';
-                teacherDiv.style.marginBottom = '10px';
+                teacherDiv.className = 'form-group'; teacherDiv.style.marginBottom = '10px';
                 const tSelect = document.createElement('select');
                 teacherList.forEach(t => {
                     const opt = document.createElement('option');
@@ -738,17 +740,14 @@
                 actionsDiv.className = 'card-actions';
 
                 const upBtn = document.createElement('button');
-                upBtn.className = 'btn-update';
-                upBtn.innerText = '💾 保存修改';
+                upBtn.className = 'btn-update'; upBtn.innerText = '💾 保存修改';
                 upBtn.onclick = async function() {
                     if(!area.value.trim()) return showToast('⚠️ 內容不能為空', 'error');
                     this.disabled = true; this.innerText = '⏳...';
                     try {
                         const newType = document.querySelector(`input[name="edit-type-${id}"]:checked`).value;
                         await updateDoc(doc(db, "announcements", id), { 
-                            announceType: newType,
-                            teacher: tSelect.value,
-                            content: area.value 
+                            announceType: newType, teacher: tSelect.value, content: area.value 
                         });
                         showToast('✅ 宣佈資料已更新！', 'success');
                     } catch(e) { showToast('❌ 更新失敗', 'error'); }
@@ -756,25 +755,19 @@
                 };
 
                 const delBtn = document.createElement('button');
-                delBtn.className = 'btn-delete';
-                delBtn.innerText = '🗑️ 刪除';
+                delBtn.className = 'btn-delete'; delBtn.innerText = '🗑️ 刪除';
                 delBtn.onclick = async function() {
-                    if (confirm(`⚠️ 確定要刪除「第${numStr}項宣佈」嗎？\n此操作無法復原。`)) {
+                    if (confirm(`⚠️ 確定要刪除「第${numStr}項宣佈」嗎？`)) {
                         this.disabled = true; upBtn.disabled = true;
                         try {
                             await deleteDoc(doc(db, "announcements", id));
-                            showToast('🗑️ 項目已成功刪除', 'info');
+                            showToast('🗑️ 項目已刪除', 'info');
                             itemDiv.style.transform = 'scale(0.9)'; itemDiv.style.opacity = '0';
                             setTimeout(() => {
                                 itemDiv.remove();
-                                if(queryResults.children.length === 0) {
-                                    queryResults.innerHTML = '<p id="no-data-msg">📭 該日無宣佈事項。</p>';
-                                }
+                                if(queryResults.children.length === 0) queryResults.innerHTML = '<p id="no-data-msg">📭 該日無宣佈事項。</p>';
                             }, 300);
-                        } catch(e) {
-                            showToast('❌ 刪除失敗', 'error');
-                            this.disabled = false; upBtn.disabled = false;
-                        }
+                        } catch(e) { showToast('❌ 刪除失敗', 'error'); this.disabled = false; upBtn.disabled = false; }
                     }
                 };
 
